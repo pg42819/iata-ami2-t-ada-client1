@@ -7,7 +7,6 @@ import picocli.CommandLine.Option;
 
 import java.io.FileWriter;
 import java.io.PrintWriter;
-import java.nio.file.Files;
 
 /**
  * Command line utility for publishing and subscribing to Adafruit sensor feed
@@ -17,7 +16,7 @@ import java.nio.file.Files;
 public class IataAdafruitCli implements Runnable
 {
 	private static final String ADAFRUIT_USERNAME = "pg42819";
-	private static final String ADAFRUIT_AIO_KEY = "aio_WzFo63uBxYCmAnDrQeks4DYVRbtC";
+	private static final String ADAFRUIT_AIO_KEY = "REMOVED_FOR_GITHUB_PUBLISH";
 
 	private static final int DEFAULT_QoS = 1;
 	private static final int DEFAULT_SLEEP = 0; // seconds or -1 for indefinite
@@ -38,20 +37,35 @@ public class IataAdafruitCli implements Runnable
 
 	@Option(names = { "-q", "--qos"},
 			description = "Quality of Service: 0 = at most once, 1 = at least once, 2 = exactly once. "
-						  + "(Defaults to " + DEFAULT_QoS + ")")
+						  + "(Defaults to ${DEFAULT-VALUE})")
 	private int _qos = DEFAULT_QoS;
 
 	@Option(names = { "-f", "--file" }, description = "File to which subscribed messages are logged")
 	private String _filePath;
 
-	@Option(names = { "--timeout"},
-			description = "Subscription timeout in seconds. Use 0 to wait forever (Defaults to " + DEFAULT_SLEEP + ")")
+	@Option(names = {"--timeout"},
+			description = "Subscription timeout in seconds. Use 0 to wait forever (Defaults to ${DEFAULT-VALUE})")
 	private int _sleepTimeout = DEFAULT_SLEEP;
 
-	@Option(names = { "--client-id" }, description = "Id to use for the client. Defaults to fixed values for subscribe and publish")
+	@Option(names = { "--client-id"},
+			description = "Id to use for the client. (Defaults to fixed values for subscribe and publish)")
 	private String _clientId = null;
 
-	public static void main(String... args)
+	@Option(names = {"--aio-user"}, description = "Adafruit.IO username. (Defaults to ${DEFAULT-VALUE})")
+	private String _aioUser = ADAFRUIT_USERNAME;
+
+	@Option(names = {
+			"--aio-key"}, description = "Adafruit.IO API key. Defaults to AIO_KEY env var or fails if not supplied")
+	private String _aioKey;
+
+	@Option(names = {"--aio-broker"}, description = "Adafruit.IO Broker URI. (Defaults to ${DEFAULT-VALUE})")
+	private String _aioBroker = ADAFRUIT_BROKER_URI;
+
+	// inject the picocli spec for use in error handling
+	@CommandLine.Spec
+	private CommandLine.Model.CommandSpec _picospec;
+
+	public static void main(String...args)
 	{
 		int exitCode = new CommandLine(new IataAdafruitCli()).execute(args);
 		System.exit(exitCode);
@@ -60,8 +74,13 @@ public class IataAdafruitCli implements Runnable
 	@Override
 	public void run()
 	{
-		IataAdafruitClient adafruitClient =
-				new IataAdafruitClient(ADAFRUIT_BROKER_URI, ADAFRUIT_USERNAME, ADAFRUIT_AIO_KEY);
+		String aioKey = _aioKey != null ? _aioKey : System.getenv("AIO_KEY");
+		if (aioKey == null) {
+			throw new CommandLine.ParameterException(_picospec.commandLine(),
+				"Cannot continue without an Adafruit.IO API Key. Pass one with --aio-key or set the env var AIO_KEY");
+		}
+
+		IataAdafruitClient adafruitClient = new IataAdafruitClient(_aioBroker, _aioUser, aioKey);
 
 		try {
 			if (_listen) {

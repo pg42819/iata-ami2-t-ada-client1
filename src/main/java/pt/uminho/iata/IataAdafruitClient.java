@@ -36,7 +36,7 @@ public class IataAdafruitClient implements AutoCloseable
 		connOpts.setCleanSession(true);
 		connOpts.setUserName(_aioUser);
 		connOpts.setPassword(_aioKey.toCharArray());
-		_info("Connecting to broker: %s with client id: ", _brokerUri, clientId);
+		_info("Connecting to broker: %s with client id: %s", _brokerUri, clientId);
 		_mqttClient.connect(connOpts);
 		_info("Successfully connected to Adafruit.io via MQTT");
 		return this;
